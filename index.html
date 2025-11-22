@@ -2,57 +2,362 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Petit Chat</title>
+  <title>Jeu & Chat</title>
   <style>
+    * { box-sizing: border-box; }
+
     body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 20px auto;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: radial-gradient(circle at top left, #ffe9f0, #e0f3ff 40%, #f3f3f3 75%);
+      min-height: 100vh;
+      color: #222;
     }
-    #login, #chat {
-      border: 1px solid #ccc;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
+
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 28px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
     }
+
+    #layout {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    #game-panel, #chat-panel {
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    #game-panel {
+      flex: 2;
+    }
+
+    #chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #game-panel h2 {
+      margin-top: 0;
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    #room-controls, #upload-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    #imageCountInfo {
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    #board {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .card {
+      width: 110px;
+      height: 150px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      background: linear-gradient(145deg, #ffffff, #f3f4f6);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+    }
+
+    .card img {
+      max-width: 100%;
+      max-height: 110px;
+      object-fit: cover;
+    }
+
+    .card .caption {
+      font-size: 12px;
+      padding: 2px 4px 4px;
+      text-align: center;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .card.crossed::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+    }
+
+    .card.crossed {
+      filter: grayscale(1);
+    }
+
+    button {
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: #ffffff;
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    button:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(148, 163, 184, 0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    /* Boutons visibles uniquement pour l'hôte */
+    .host-only {
+      display: none;
+    }
+
+    input[type="text"] {
+      padding: 6px 8px;
+      font-size: 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      outline: none;
+      min-width: 0;
+    }
+
+    input[type="text"]:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+    }
+
+    #login {
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 10px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      background: rgba(248, 250, 252, 0.9);
+    }
+
+    #chat {
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(248, 250, 252, 0.9);
+    }
+
     #messages {
-      border: 1px solid #ddd;
-      height: 300px;
+      border: 1px solid #e5e7eb;
+      height: 250px;
       overflow-y: auto;
       padding: 10px;
       margin-bottom: 10px;
+      background: #f9fafb;
+      border-radius: 10px;
     }
+
     .message {
       margin-bottom: 6px;
+      font-size: 13px;
+      line-height: 1.3;
     }
+
     .author {
-      font-weight: bold;
+      font-weight: 600;
       margin-right: 4px;
     }
+
     small {
-      color: #666;
+      color: #6b7280;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+
+    #messageForm {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    #messageInput {
+      flex: 1;
+    }
+
+    #currentRoomLabel {
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(59, 130, 246, 0.06);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      font-size: 12px;
+    }
+
+    /* Secret character panel */
+    #secret-panel {
+      margin-top: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(248, 250, 252, 0.9);
+    }
+
+    #secret-panel h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    #secretCard {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .secret-card {
+      width: 110px;
+      height: 150px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, #ffffff, #f3f4f6);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+
+    .secret-card img {
+      max-width: 100%;
+      max-height: 110px;
+      object-fit: cover;
+    }
+
+    .secret-card .caption {
+      font-size: 12px;
+      padding: 2px 4px 4px;
+      text-align: center;
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    @media (max-width: 900px) {
+      #layout {
+        flex-direction: column;
+      }
+      #chat-panel {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Chat simple</h1>
+  <h1>Jeu en ligne</h1>
 
-  <div id="login">
-    <label>Pseudo : <input id="usernameInput" /></label>
-    <button id="saveUsernameBtn">Valider</button>
+  <div id="layout">
+    <!-- Panel du jeu -->
+    <div id="game-panel">
+      <h2>Plateau commun</h2>
+
+      <p style="font-size:12px;color:#666;">
+        ⚠️ Utilisez des images raisonnables (&lt; 800 Ko) pour éviter les limites de Firestore.
+      </p>
+
+      <div id="room-controls">
+        <span>Salle :</span>
+        <span id="currentRoomLabel"></span>
+      </div>
+
+      <div id="upload-controls">
+        <label>
+          Images à envoyer :
+          <input id="uploadInput" type="file" multiple accept="image/*" />
+        </label>
+        <button id="uploadBtn" type="button">Uploader vers la base</button>
+        <button id="generateBoardBtn" class="host-only" type="button">Générer le plateau (24 aléatoires)</button>
+        <button id="clearImagesBtn" class="host-only" type="button">Vider la base d'images (hôte)</button>
+      </div>
+
+      <p id="imageCountInfo">
+        Images disponibles dans la base : <span id="imageCount">0</span>
+      </p>
+
+      <div id="board"></div>
+    </div>
+
+    <!-- Panel du chat + secret -->
+    <div id="chat-panel">
+      <div id="login">
+        <label>Pseudo :
+          <input id="usernameInput" />
+        </label>
+        <button id="saveUsernameBtn">Valider</button>
+      </div>
+
+      <div id="chat" style="display:none;">
+        <p>Connecté en tant que : <span id="currentUser"></span></p>
+        <div id="hostControls" style="margin-bottom: 8px; font-size: 12px;">
+          <span id="hostStatusText"></span>
+          <button id="becomeHostBtn" type="button" style="margin-left: 8px; display:none;">Devenir hôte</button>
+          <button id="releaseHostBtn" type="button" style="margin-left: 8px; display:none;">Permettre un nouvel hôte</button>
+        </div>
+        <div id="messages"></div>
+        <form id="messageForm">
+          <input id="messageInput" placeholder="Écris un message..." autocomplete="off" />
+          <button type="submit">Envoyer</button>
+        </form>
+      </div>
+
+      <div id="secret-panel">
+        <h3>Personnage à deviner (local)</h3>
+        <div id="secretCard">Aucun plateau généré.</div>
+        <button id="newSecretBtn" type="button">Nouveau personnage aléatoire</button>
+      </div>
+    </div>
   </div>
 
-  <div id="chat" style="display:none;">
-    <p>Connecté en tant que : <span id="currentUser"></span></p>
-    <div id="messages"></div>
-    <form id="messageForm">
-      <input id="messageInput" placeholder="Écris un message..." autocomplete="off" />
-      <button type="submit">Envoyer</button>
-    </form>
-  </div>
-
-      <script type="module">
-    // 1) Import Firebase depuis le CDN
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
     import {
       getFirestore,
@@ -61,10 +366,14 @@
       serverTimestamp,
       query,
       orderBy,
-      onSnapshot
+      onSnapshot,
+      doc,
+      setDoc,
+      getDoc,
+      getDocs,
+      deleteDoc
     } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
 
-    // 2) Ta config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyAjXE8fsZ3735Yc23ww1p1wy97u2Dpg7BY",
       authDomain: "coolwebsite-7491e.firebaseapp.com",
@@ -75,11 +384,12 @@
       measurementId: "G-TFQBB2ZFPQ"
     };
 
-    // 3) Initialisation Firebase + Firestore
+    const DEFAULT_ROOM_ID = "salle-unique";
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 4) Références DOM
+    // === CHAT ===
     const loginDiv = document.getElementById("login");
     const chatDiv = document.getElementById("chat");
     const usernameInput = document.getElementById("usernameInput");
@@ -88,18 +398,81 @@
     const messagesDiv = document.getElementById("messages");
     const messageForm = document.getElementById("messageForm");
     const messageInput = document.getElementById("messageInput");
+    const hostOnlyElements = document.querySelectorAll(".host-only");
+    const hostStatusText = document.getElementById("hostStatusText");
+    const becomeHostBtn = document.getElementById("becomeHostBtn");
+    const releaseHostBtn = document.getElementById("releaseHostBtn");
 
     let username = localStorage.getItem("chat_username") || "";
+    let isHost = false;
+    let currentHost = null;
+
+    // Couleurs aléatoires par pseudo (stable pendant la session)
+    const userColors = {};
+    function getColorForUser(name) {
+      if (!name) return "#000";
+      if (!userColors[name]) {
+        const hue = Math.floor(Math.random() * 360);
+        userColors[name] = `hsl(${hue}, 70%, 50%)`;
+      }
+      return userColors[name];
+    }
+
+    function updateCurrentUserDisplay() {
+      if (!username) return;
+      let label = username;
+      if (currentHost && username === currentHost) {
+        label += " (hote)";
+      }
+      currentUserSpan.textContent = label;
+      currentUserSpan.style.fontWeight = "600";
+      currentUserSpan.style.color = getColorForUser(username);
+    }
+
+    function applyHostUI() {
+      // Affichage des boutons réservés à l'hôte (plateau, reset images, etc.)
+      hostOnlyElements.forEach(el => {
+        el.style.display = isHost ? "inline-block" : "none";
+      });
+
+      // Texte d'état de l'hôte + boutons devenir / relâcher
+      if (!username) {
+        if (hostStatusText) hostStatusText.textContent = "";
+        if (becomeHostBtn) becomeHostBtn.style.display = "none";
+        if (releaseHostBtn) releaseHostBtn.style.display = "none";
+        return;
+      }
+
+      if (currentHost) {
+        if (hostStatusText) {
+          if (isHost) {
+            hostStatusText.textContent = "Vous êtes l'hôte.";
+          } else {
+            hostStatusText.textContent = "Hôte actuel : " + currentHost + ".";
+          }
+        }
+        if (becomeHostBtn) becomeHostBtn.style.display = "none";
+        if (releaseHostBtn) releaseHostBtn.style.display = isHost ? "inline-block" : "none";
+      } else {
+        if (hostStatusText) {
+          hostStatusText.textContent = "Il n'y a pas encore d'hôte.";
+        }
+        if (becomeHostBtn) becomeHostBtn.style.display = "inline-block";
+        if (releaseHostBtn) releaseHostBtn.style.display = "none";
+      }
+
+      updateCurrentUserDisplay();
+    }
 
     function showChatIfReady() {
       if (username && username.trim() !== "") {
-        currentUserSpan.textContent = username;
+        updateCurrentUserDisplay();
         loginDiv.style.display = "none";
         chatDiv.style.display = "block";
+        applyHostUI();
       }
     }
 
-    // Gérer le pseudo
     if (username) {
       usernameInput.value = username;
       showChatIfReady();
@@ -115,30 +488,43 @@
       showChatIfReady();
     });
 
-    // 5) Listener temps réel sur la collection "messages"
     const messagesCol = collection(db, "messages");
     const messagesQuery = query(messagesCol, orderBy("createdAt", "asc"));
 
     onSnapshot(messagesQuery, (snapshot) => {
       messagesDiv.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const data = doc.data();
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         const div = document.createElement("div");
         div.className = "message";
-        const date = data.createdAt?.toDate
+
+        const rawAuthor = data.author || "??";
+        const isAuthorHost = currentHost && rawAuthor === currentHost;
+        const displayAuthor = isAuthorHost ? rawAuthor + " (hote)" : rawAuthor;
+
+        const authorSpan = document.createElement("span");
+        authorSpan.className = "author";
+        authorSpan.textContent = displayAuthor + ":";
+        authorSpan.style.color = getColorForUser(rawAuthor);
+
+        const textSpan = document.createElement("span");
+        textSpan.textContent = " " + (data.text || "");
+
+        const date = data.createdAt && data.createdAt.toDate
           ? data.createdAt.toDate().toLocaleTimeString()
           : "";
-        div.innerHTML = `
-          <span class="author">${data.author || "??"}:</span>
-          <span>${data.text || ""}</span>
-          <small>${date}</small>
-        `;
+        const timeSpan = document.createElement("small");
+        timeSpan.textContent = date;
+
+        div.appendChild(authorSpan);
+        div.appendChild(textSpan);
+        div.appendChild(timeSpan);
+
         messagesDiv.appendChild(div);
       });
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
 
-    // 6) Envoi de message
     messageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = messageInput.value.trim();
@@ -152,8 +538,364 @@
 
       messageInput.value = "";
     });
+
+    // === GESTION DE L'HÔTE (FireStore, salle unique) ===
+    const hostDocRef = doc(db, "config", "host");
+
+    // Écoute en temps réel de l'hôte actuel
+    onSnapshot(hostDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        currentHost = data && data.hostUsername ? data.hostUsername : null;
+      } else {
+        currentHost = null;
+      }
+      isHost = (username && currentHost === username);
+      applyHostUI();
+    });
+
+    // Bouton "Devenir hôte" (visible seulement quand il n'y a pas d'hôte)
+    if (becomeHostBtn) {
+      becomeHostBtn.addEventListener("click", async () => {
+        if (!username) {
+          alert("Connecte-toi d'abord avec un pseudo.");
+          return;
+        }
+        try {
+          await setDoc(hostDocRef, { hostUsername: username });
+        } catch (err) {
+          console.error("Erreur lors de la prise du rôle d'hôte :", err);
+          alert("Impossible de devenir hôte pour le moment.");
+        }
+      });
+    }
+
+    // Bouton "Permettre un nouvel hôte" (visible seulement pour l'hôte)
+    if (releaseHostBtn) {
+      releaseHostBtn.addEventListener("click", async () => {
+        if (!username || !isHost) return;
+        const confirmRelease = confirm("Tu vas libérer le rôle d'hôte pour que quelqu'un d'autre puisse le prendre. Continuer ?");
+        if (!confirmRelease) return;
+
+        try {
+          await setDoc(hostDocRef, { hostUsername: null });
+        } catch (err) {
+          console.error("Erreur lors de la libération du rôle d'hôte :", err);
+          alert("Impossible de libérer le rôle d'hôte pour le moment.");
+        }
+      });
+    }
+
+    // === QUI EST-CE MULTI (Base64 + IDs) ===
+    const currentRoomLabel = document.getElementById("currentRoomLabel");
+
+    const uploadInput = document.getElementById("uploadInput");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const generateBoardBtn = document.getElementById("generateBoardBtn");
+    const clearImagesBtn = document.getElementById("clearImagesBtn");
+
+    const boardDiv = document.getElementById("board");
+    const imageCountSpan = document.getElementById("imageCount");
+    const secretCardDiv = document.getElementById("secretCard");
+    const newSecretBtn = document.getElementById("newSecretBtn");
+
+    let currentRoomId = null;
+    let roomUnsubscribe = null;
+    let currentBoardImages = [];
+    let currentLocalSecret = null;
+
+    function buildBoardFromData(imagesArray) {
+      boardDiv.innerHTML = "";
+      if (!imagesArray || imagesArray.length === 0) {
+        boardDiv.textContent = "Aucune image pour ce plateau.";
+        return;
+      }
+
+      imagesArray.forEach((imgObj) => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const img = document.createElement("img");
+        img.src = imgObj.dataUrl;
+        img.alt = imgObj.name || "";
+
+        const caption = document.createElement("div");
+        caption.className = "caption";
+        caption.textContent = imgObj.name || "";
+
+        card.appendChild(img);
+        card.appendChild(caption);
+
+        card.addEventListener("click", () => {
+          card.classList.toggle("crossed");
+        });
+
+        boardDiv.appendChild(card);
+      });
+    }
+
+    function renderSecretCard(imgObj) {
+      secretCardDiv.innerHTML = "";
+      if (!imgObj) {
+        secretCardDiv.textContent = 'Clique sur "Nouveau personnage" pour en choisir un.';
+        return;
+      }
+      const card = document.createElement("div");
+      card.className = "secret-card";
+
+      const img = document.createElement("img");
+      img.src = imgObj.dataUrl;
+      img.alt = imgObj.name || "";
+
+      const caption = document.createElement("div");
+      caption.className = "caption";
+      caption.textContent = imgObj.name || "";
+
+      card.appendChild(img);
+      card.appendChild(caption);
+
+      secretCardDiv.appendChild(card);
+    }
+
+    async function loadBoardFromIds(ids) {
+      currentBoardImages = [];
+      currentLocalSecret = null;
+
+      if (!ids || ids.length === 0) {
+        buildBoardFromData([]);
+        renderSecretCard(null);
+        return;
+      }
+
+      const imagesCol = collection(db, "images_base64");
+      const result = [];
+
+      for (const id of ids) {
+        const imgRef = doc(imagesCol, id);
+        const snap = await getDoc(imgRef);
+        if (snap.exists()) {
+          const d = snap.data();
+          if (d.dataUrl) {
+            result.push({
+              dataUrl: d.dataUrl,
+              name: d.name || ""
+            });
+          }
+        }
+      }
+
+      currentBoardImages = result;
+      buildBoardFromData(result);
+      renderSecretCard(null);
+    }
+
+    async function joinRoom(roomId) {
+      if (!roomId) return;
+      currentRoomId = roomId;
+
+      if (roomUnsubscribe) {
+        roomUnsubscribe();
+        roomUnsubscribe = null;
+      }
+
+      const roomRef = doc(db, "rooms", roomId);
+      const snap = await getDoc(roomRef);
+      if (!snap.exists()) {
+        await setDoc(roomRef, {
+          createdAt: serverTimestamp(),
+          boardImageIds: []
+        });
+      }
+
+      currentRoomLabel.textContent = roomId;
+
+      roomUnsubscribe = onSnapshot(roomRef, (docSnap) => {
+        const data = docSnap.data() || {};
+        const ids = data.boardImageIds || [];
+        loadBoardFromIds(ids);
+      });
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    uploadBtn.addEventListener("click", async () => {
+      if (!uploadInput.files || uploadInput.files.length === 0) {
+        alert("Choisis d'abord des images à envoyer.");
+        return;
+      }
+
+      const files = Array.from(uploadInput.files);
+      const imagesCol = collection(db, "images_base64");
+      let count = 0;
+
+      for (const file of files) {
+        if (file.size > 800 * 1024) {
+          alert("L'image " + file.name + " est trop grosse (>800Ko), elle est ignorée.");
+          continue;
+        }
+
+        const dataUrl = await fileToDataUrl(file);
+
+        await addDoc(imagesCol, {
+          dataUrl: dataUrl,
+          name: file.name,
+          uploadedBy: username || "anonymous",
+          createdAt: serverTimestamp()
+        });
+        count++;
+      }
+
+      uploadInput.value = "";
+
+      if (count > 0) {
+        const who = username && username.trim() ? username : "Un joueur";
+        await addDoc(messagesCol, {
+          author: "[Système]",
+          text: who + " a ajouté " + count + " image(s) dans la base.",
+          createdAt: serverTimestamp()
+        });
+      }
+    });
+
+    // Générer un plateau : jusqu'à 24 images uniques, on stocke uniquement leurs IDs dans la room
+    generateBoardBtn.addEventListener("click", async () => {
+      if (!currentRoomId) {
+        alert("Problème de salle.");
+        return;
+      }
+
+      const imagesCol = collection(db, "images_base64");
+      const snap = await getDocs(imagesCol);
+
+      // On récupère toutes les images avec leur ID
+      const all = [];
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        if (d.dataUrl) {
+          all.push({
+            id: docSnap.id,
+            dataUrl: d.dataUrl,
+            name: d.name || ""
+          });
+        }
+      });
+
+      if (all.length === 0) {
+        alert("Il n'y a encore aucune image dans la base. Uploade d'abord des images.");
+        return;
+      }
+
+      // Dédupliquer par dataUrl
+      const map = new Map();
+      for (const img of all) {
+        if (!map.has(img.dataUrl)) {
+          map.set(img.dataUrl, img);
+        }
+      }
+      const unique = Array.from(map.values());
+
+      if (unique.length === 0) {
+        alert("Impossible de générer le plateau (aucune image unique).");
+        return;
+      }
+
+      // Mélange aléatoire
+      for (let i = unique.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = unique[i];
+        unique[i] = unique[j];
+        unique[j] = tmp;
+      }
+
+      // On prend au max 24 images uniques
+      const selected = unique.slice(0, Math.min(24, unique.length));
+      const selectedIds = selected.map(img => img.id);
+
+      const roomRef = doc(db, "rooms", currentRoomId);
+      await setDoc(
+        roomRef,
+        { boardImageIds: selectedIds },
+        { merge: true }
+      );
+
+      const who = username && username.trim() ? username : "Un joueur";
+      await addDoc(messagesCol, {
+        author: "[Système]",
+        text: who + " a généré un nouveau plateau avec " + selectedIds.length + " image(s).",
+        createdAt: serverTimestamp()
+      });
+    });
+
+    // Vider toutes les images de la base (hôte)
+    clearImagesBtn.addEventListener("click", async () => {
+      if (!confirm("Tu es sûr de vouloir supprimer TOUTES les images de la base ?")) return;
+
+      const imagesCol = collection(db, "images_base64");
+      const snap = await getDocs(imagesCol);
+
+      const deletions = [];
+      snap.forEach((docSnap) => {
+        deletions.push(deleteDoc(doc(imagesCol, docSnap.id)));
+      });
+
+      await Promise.all(deletions);
+
+      // On vide aussi le plateau pour tout le monde
+      if (currentRoomId) {
+        const roomRef = doc(db, "rooms", currentRoomId);
+        await setDoc(
+          roomRef,
+          { boardImageIds: [] },
+          { merge: true }
+        );
+      }
+
+      const who = username && username.trim() ? username : "Un joueur";
+      await addDoc(messagesCol, {
+        author: "[Système]",
+        text: who + " a vidé la base d'images.",
+        createdAt: serverTimestamp()
+      });
+
+      alert("Base d'images vidée.");
+    });
+
+    // Bouton "Nouveau personnage aléatoire" (local seulement)
+    newSecretBtn.addEventListener("click", () => {
+      if (!currentBoardImages.length) {
+        alert("Génère un plateau d'abord.");
+        return;
+      }
+      const random =
+        currentBoardImages[Math.floor(Math.random() * currentBoardImages.length)];
+      currentLocalSecret = random;
+      renderSecretCard(random);
+    });
+
+    // Compteur global d'images (uniques) dans la base, visible par tous
+    (function subscribeImageCount() {
+      const imagesCol = collection(db, "images_base64");
+      onSnapshot(imagesCol, (snapshot) => {
+        const unique = new Set();
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d.dataUrl) {
+            unique.add(d.dataUrl);
+          }
+        });
+        imageCountSpan.textContent = unique.size.toString();
+      });
+    })();
+
+    // On rejoint automatiquement la salle unique
+    joinRoom(DEFAULT_ROOM_ID);
   </script>
-
-
 </body>
 </html>
