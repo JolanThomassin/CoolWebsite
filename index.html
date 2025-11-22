@@ -389,6 +389,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // === CONSTANTE TIMEOUT HÔTE (2 min) ===
+    const HOST_TIMEOUT_MS = 2 * 60 * 1000;
+
     // === CHAT ===
     const loginDiv = document.getElementById("login");
     const chatDiv = document.getElementById("chat");
@@ -406,6 +409,13 @@
     let username = localStorage.getItem("chat_username") || "";
     let isHost = false;
     let currentHost = null;
+
+    // Id de client pour distinguer les navigateurs
+    let clientId = localStorage.getItem("client_id") || "";
+    if (!clientId) {
+      clientId = Math.random().toString(36).slice(2);
+      localStorage.setItem("client_id", clientId);
+    }
 
     // Couleurs aléatoires par pseudo (stable pendant la session)
     const userColors = {};
@@ -429,7 +439,7 @@
       currentUserSpan.style.color = getColorForUser(username);
     }
 
-    function applyHostUI() {
+    function applyHostUI(hostIsStale = false) {
       // Affichage des boutons réservés à l'hôte (plateau, reset images, etc.)
       hostOnlyElements.forEach(el => {
         el.style.display = isHost ? "inline-block" : "none";
@@ -447,12 +457,19 @@
         if (hostStatusText) {
           if (isHost) {
             hostStatusText.textContent = "Vous êtes l'hôte.";
+          } else if (hostIsStale) {
+            hostStatusText.textContent = "L'hôte actuel semble déconnecté. Vous pouvez prendre la main.";
           } else {
             hostStatusText.textContent = "Hôte actuel : " + currentHost + ".";
           }
         }
-        if (becomeHostBtn) becomeHostBtn.style.display = "none";
-        if (releaseHostBtn) releaseHostBtn.style.display = isHost ? "inline-block" : "none";
+        if (becomeHostBtn) {
+          // On ne propose "Devenir hôte" que si l'hôte est considéré inactif
+          becomeHostBtn.style.display = hostIsStale ? "inline-block" : "none";
+        }
+        if (releaseHostBtn) {
+          releaseHostBtn.style.display = isHost ? "inline-block" : "none";
+        }
       } else {
         if (hostStatusText) {
           hostStatusText.textContent = "Il n'y a pas encore d'hôte.";
@@ -542,19 +559,58 @@
     // === GESTION DE L'HÔTE (FireStore, salle unique) ===
     const hostDocRef = doc(db, "config", "host");
 
-    // Écoute en temps réel de l'hôte actuel
+    // Écoute en temps réel de l'hôte actuel + détection d'inactivité
     onSnapshot(hostDocRef, (snap) => {
+      let hostIsStale = false;
       if (snap.exists()) {
         const data = snap.data();
         currentHost = data && data.hostUsername ? data.hostUsername : null;
+
+        const last =
+          data &&
+          data.lastSeenAt &&
+          data.lastSeenAt.toMillis
+            ? data.lastSeenAt.toMillis()
+            : null;
+
+        if (currentHost && last) {
+          const age = Date.now() - last;
+          if (age > HOST_TIMEOUT_MS) {
+            hostIsStale = true;
+          }
+        }
       } else {
         currentHost = null;
       }
+
+      // Si l'hôte est inactif depuis trop longtemps, on le considère comme absent
+      if (hostIsStale) {
+        currentHost = null;
+      }
+
       isHost = (username && currentHost === username);
-      applyHostUI();
+      applyHostUI(hostIsStale);
     });
 
-    // Bouton "Devenir hôte" (visible seulement quand il n'y a pas d'hôte)
+    // Heartbeat : l'hôte met à jour régulièrement son "lastSeenAt"
+    setInterval(async () => {
+      if (!isHost || !username) return;
+      try {
+        await setDoc(
+          hostDocRef,
+          {
+            hostUsername: username,
+            hostClientId: clientId,
+            lastSeenAt: serverTimestamp()
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error("Erreur lors du heartbeat hôte :", err);
+      }
+    }, 20000); // toutes les 20s
+
+    // Bouton "Devenir hôte" (visible quand il n'y a pas d'hôte OU qu'il est inactif)
     if (becomeHostBtn) {
       becomeHostBtn.addEventListener("click", async () => {
         if (!username) {
@@ -562,7 +618,41 @@
           return;
         }
         try {
-          await setDoc(hostDocRef, { hostUsername: username });
+          const snap = await getDoc(hostDocRef);
+          let canTake = true;
+
+          if (snap.exists()) {
+            const data = snap.data();
+            const existingHost = data.hostUsername || null;
+            const last =
+              data &&
+              data.lastSeenAt &&
+              data.lastSeenAt.toMillis
+                ? data.lastSeenAt.toMillis()
+                : null;
+
+            if (existingHost && last) {
+              const age = Date.now() - last;
+              // Si l'hôte actuel est encore "récent", on ne prend pas la main
+              if (age <= HOST_TIMEOUT_MS) {
+                canTake = false;
+              }
+            }
+          }
+
+          if (!canTake) {
+            alert("Il y a déjà un hôte actif.");
+            return;
+          }
+
+          await setDoc(
+            hostDocRef,
+            {
+              hostUsername: username,
+              hostClientId: clientId,
+              lastSeenAt: serverTimestamp()
+            }
+          );
         } catch (err) {
           console.error("Erreur lors de la prise du rôle d'hôte :", err);
           alert("Impossible de devenir hôte pour le moment.");
@@ -578,7 +668,11 @@
         if (!confirmRelease) return;
 
         try {
-          await setDoc(hostDocRef, { hostUsername: null });
+          await setDoc(hostDocRef, {
+            hostUsername: null,
+            hostClientId: null,
+            lastSeenAt: serverTimestamp()
+          });
         } catch (err) {
           console.error("Erreur lors de la libération du rôle d'hôte :", err);
           alert("Impossible de libérer le rôle d'hôte pour le moment.");
