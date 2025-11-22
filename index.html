@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Petit Chat</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 20px auto;
+    }
+    #login, #chat {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    #messages {
+      border: 1px solid #ddd;
+      height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .message {
+      margin-bottom: 6px;
+    }
+    .author {
+      font-weight: bold;
+      margin-right: 4px;
+    }
+    small {
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chat simple</h1>
+
+  <div id="login">
+    <label>Pseudo : <input id="usernameInput" /></label>
+    <button id="saveUsernameBtn">Valider</button>
+  </div>
+
+  <div id="chat" style="display:none;">
+    <p>Connecté en tant que : <span id="currentUser"></span></p>
+    <div id="messages"></div>
+    <form id="messageForm">
+      <input id="messageInput" placeholder="Écris un message..." autocomplete="off" />
+      <button type="submit">Envoyer</button>
+    </form>
+  </div>
+
+      <script type="module">
+    // 1) Import Firebase depuis le CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js";
+
+    // 2) Ta config Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAjXE8fsZ3735Yc23ww1p1wy97u2Dpg7BY",
+      authDomain: "coolwebsite-7491e.firebaseapp.com",
+      projectId: "coolwebsite-7491e",
+      storageBucket: "coolwebsite-7491e.firebasestorage.app",
+      messagingSenderId: "592189462254",
+      appId: "1:592189462254:web:da05d9fd27413eabad05ff",
+      measurementId: "G-TFQBB2ZFPQ"
+    };
+
+    // 3) Initialisation Firebase + Firestore
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 4) Références DOM
+    const loginDiv = document.getElementById("login");
+    const chatDiv = document.getElementById("chat");
+    const usernameInput = document.getElementById("usernameInput");
+    const saveUsernameBtn = document.getElementById("saveUsernameBtn");
+    const currentUserSpan = document.getElementById("currentUser");
+    const messagesDiv = document.getElementById("messages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+
+    let username = localStorage.getItem("chat_username") || "";
+
+    function showChatIfReady() {
+      if (username && username.trim() !== "") {
+        currentUserSpan.textContent = username;
+        loginDiv.style.display = "none";
+        chatDiv.style.display = "block";
+      }
+    }
+
+    // Gérer le pseudo
+    if (username) {
+      usernameInput.value = username;
+      showChatIfReady();
+    }
+
+    saveUsernameBtn.addEventListener("click", () => {
+      username = usernameInput.value.trim();
+      if (!username) {
+        alert("Choisis un pseudo 😄");
+        return;
+      }
+      localStorage.setItem("chat_username", username);
+      showChatIfReady();
+    });
+
+    // 5) Listener temps réel sur la collection "messages"
+    const messagesCol = collection(db, "messages");
+    const messagesQuery = query(messagesCol, orderBy("createdAt", "asc"));
+
+    onSnapshot(messagesQuery, (snapshot) => {
+      messagesDiv.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "message";
+        const date = data.createdAt?.toDate
+          ? data.createdAt.toDate().toLocaleTimeString()
+          : "";
+        div.innerHTML = `
+          <span class="author">${data.author || "??"}:</span>
+          <span>${data.text || ""}</span>
+          <small>${date}</small>
+        `;
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    // 6) Envoi de message
+    messageForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text || !username) return;
+
+      await addDoc(messagesCol, {
+        author: username,
+        text: text,
+        createdAt: serverTimestamp()
+      });
+
+      messageInput.value = "";
+    });
+  </script>
+
+
+</body>
+</html>
